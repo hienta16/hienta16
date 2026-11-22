@@ -26,7 +26,12 @@ I'm a data analyst studying Information Systems at National Economics University
 <a href="https://hienta16.github.io/#cat"><img src="assets/generated/toybox.svg" width="100%" alt="Hien's tortoiseshell cat on a rug with the toys visitors gave."></a>
 
 <!-- catwalk:toys:start -->
-<p align="center"><sub>The toy box opens when this profile goes public. Until then, the cat is practising alone.</sub></p>
+<p align="center">
+  <a href="https://github.com/hienta16/hienta16/issues/new?title=%5Bcat-toy%5D%20yarn&amp;body=Just%20press%20Create%2C%20there%20is%20nothing%20to%20write.%20A%20GitHub%20Action%20checks%20the%20gift%20%28one%20per%20GitHub%20account%20every%2024%20hours%29%20and%20the%20toy%20appears%20in%20the%20toy%20box%20within%20a%20few%20minutes."><img src="assets/generated/btn-yarn.svg" height="44" alt="Give yarn"></a>
+  <a href="https://github.com/hienta16/hienta16/issues/new?title=%5Bcat-toy%5D%20feather&amp;body=Just%20press%20Create%2C%20there%20is%20nothing%20to%20write.%20A%20GitHub%20Action%20checks%20the%20gift%20%28one%20per%20GitHub%20account%20every%2024%20hours%29%20and%20the%20toy%20appears%20in%20the%20toy%20box%20within%20a%20few%20minutes."><img src="assets/generated/btn-feather.svg" height="44" alt="Give a feather"></a>
+  <a href="https://github.com/hienta16/hienta16/issues/new?title=%5Bcat-toy%5D%20box&amp;body=Just%20press%20Create%2C%20there%20is%20nothing%20to%20write.%20A%20GitHub%20Action%20checks%20the%20gift%20%28one%20per%20GitHub%20account%20every%2024%20hours%29%20and%20the%20toy%20appears%20in%20the%20toy%20box%20within%20a%20few%20minutes."><img src="assets/generated/btn-box.svg" height="44" alt="Give a box"></a>
+</p>
+<p align="center"><sub>Each button opens a pre-filled issue. Press <b>Create</b> and the toy appears within a few minutes.</sub></p>
 
 <details>
 <summary>How the toy box works</summary>
@@ -45,5 +50,5 @@ I'm a data analyst studying Information Systems at National Economics University
 Case studies, notebooks and dashboards are being prepared. They land here when they are ready to be public.
 
 <!-- catwalk:updated:start -->
-<sub>Numbers from the GitHub API, drawn by Python in [`catwalk/`](catwalk) · last refresh Sun 22 Nov 2026, 22:32 UTC, a snapshot; the automatic refresh switches on when this profile goes public. Private repositories are counted as numbers only; commits by bots are not counted.</sub>
+<sub>Numbers from the GitHub API, drawn by Python in [`catwalk/`](catwalk) · last refresh Sun 22 Nov 2026, 22:32 UTC, redrawn by GitHub Actions every 6 hours. Private repositories are counted as numbers only; commits by bots are not counted.</sub>
 <!-- catwalk:updated:end -->
