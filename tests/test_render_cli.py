@@ -22,9 +22,9 @@ NOW = at("2026-11-23T06:00:00Z")
 
 def seeded(live=True):
     paths = temp_root()
-    if live:
-        cfg = read_json(paths.site_config)
-        write_json(paths.site_config, {**cfg, "hub_public": True, "toys_live": True})
+    # Set both switches explicitly, whatever the repository's own config says today.
+    cfg = read_json(paths.site_config)
+    write_json(paths.site_config, {**cfg, "hub_public": live, "toys_live": live})
     shutil.copy(ROOT / "data" / "github.json", paths.root / "data.json")
     (paths.root / "data").mkdir(exist_ok=True)
     shutil.copy(ROOT / "data" / "github.json", paths.github_data)
