@@ -1,16 +1,18 @@
 # Going live: the switches, in order
 
-Everything is built and tested, and nothing is switched on. This page lists exactly what turns each part on, so it
-happens only when Hien decides. Nothing here is done by the automation itself.
+This page lists exactly what turns each part on or off. Nothing here is done by the automation itself.
 
-## Where things stand
+## Where things stand (live since 23/11/2026, approved by Hien)
 
 | | State |
 |---|---|
-| `hienta16/hienta16` (this hub) | private staging repository; review branch `feature/python-catwalk-cat-toys` |
-| `hienta16/hienta16.github.io` (website) | private; review branch `feature/python-catwalk-cat-toys`; GitHub Pages **not** enabled |
-| Workflows | committed, inert: they live on a review branch (schedules and issue events only run from the default branch), and every job also waits for a repository variable that is not set |
-| `config/catwalk.json` | `hub_public: false`, `toys_live: false` |
+| `hienta16/hienta16` (this hub) | **public**; `main` merged from `feature/python-catwalk-cat-toys` (PR #1); the profile README is live on github.com/hienta16 |
+| `hienta16/hienta16.github.io` (website) | **public**; GitHub Pages from GitHub Actions; live at https://hienta16.github.io |
+| Workflows | on: repository variables `CATWALK_AUTOMATION=on` and `CATWALK_TOYS=on` |
+| `config/catwalk.json` | `hub_public: true`, `toys_live: true` |
+| `CATWALK_STATS_TOKEN` | **not set**: counts that include private repositories keep their last complete values (dated) until a read-only token is added (step 1.2) |
+
+The steps below are how it was switched on, kept as the reference for switching parts off or on again.
 
 ## 1. Stats refresh only (safe while everything is private)
 
