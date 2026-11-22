@@ -1,0 +1,66 @@
+# The cat's toy box: a visitor opens an issue titled "[cat-toy] yarn" (or feather, box), Python checks it,
+# records the gift, redraws the toy box, then replies on the issue and closes it.
+#
+# Switched OFF until Hien approves: runs only when the repository variable CATWALK_TOYS is "on", and issue events
+# only ever run the workflow file on the default branch. See docs/ACTIVATION.md.
+#
+# Safety: the issue title and body never reach a shell. Python reads the event payload file GitHub wrote
+# ($GITHUB_EVENT_PATH), trusts only GitHub-set fields (author id and type, issue number, creation time) and matches
+# the title against a fixed list of toys. One gift per account per rolling 24 hours is enforced in Python, here.
+
+name: Cat toys
+
+on:
+  issues:
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  gift:
+    if: >-
+      vars.CATWALK_TOYS == 'on' &&
+      github.event.issue.pull_request == null &&
+      startsWith(github.event.issue.title, '[cat-toy]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Check and record the gift, redraw, commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          result="$RUNNER_TEMP/cat-toy-result.json"
+          for attempt in 1 2 3 4 5; do
+            # always start from the newest state, so two gifts at once are both kept (duplicates are detected)
+            git fetch --quiet origin main
+            git reset --hard --quiet origin/main
+            python -m catwalk toys handle --event "$GITHUB_EVENT_PATH" --result "$result"
+            python -m catwalk render --only toybox,readme || echo "::warning::Redraw failed; the gift is saved and the next refresh draws it."
+            git add data/toys.json assets/generated README.md
+            if git diff --cached --quiet; then
+              touch "$RUNNER_TEMP/pushed"
+              exit 0
+            fi
+            git commit --quiet --message "$(python -m catwalk toys commit-message --result "$result")"
+            if git push --quiet origin HEAD:main; then
+              touch "$RUNNER_TEMP/pushed"
+              exit 0
+            fi
+            sleep $((attempt * 3))
+          done
+          echo "Could not save the gift after 5 attempts."
+          exit 1
+
+      - name: Reply on the issue and close it
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python -m catwalk toys respond --result "$RUNNER_TEMP/cat-toy-result.json" --pushed-marker "$RUNNER_TEMP/pushed"
