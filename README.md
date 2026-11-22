@@ -8,7 +8,7 @@
   <a href="https://www.linkedin.com/in/hienta16/"><img src="assets/generated/btn-linkedin.svg" height="40" alt="LinkedIn"></a>
 </p>
 
-I'm a data analyst studying Management Information Systems in Hanoi. I treat data the way I treat music and dance: find the rhythm first, then listen for the one note that doesn't belong. My tortoiseshell cat taught me the rest: watch the whole room before you pounce.
+I'm a data analyst studying Information Systems at National Economics University (NEU) in Hanoi. I treat data the way I treat music and dance: find the rhythm first, then listen for the one note that doesn't belong. My tortoiseshell cat taught me the rest: watch the whole room before you pounce.
 
 ### By the numbers
 
