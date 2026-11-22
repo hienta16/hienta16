@@ -52,6 +52,16 @@ class PrivacyCheck(unittest.TestCase):
         self.assertEqual(fixed.counts[-1], 4)
         self.assertTrue(notes)
 
+    def test_yesterday_may_still_be_settling_too(self):
+        c = Calendar(date(2026, 1, 1), (1, 0, 2, 3, 0, 0, 7, 5))
+        public = {d.date.isoformat(): d.count for d in c.days()}
+        public["2026-01-07"] = 6  # the cached page lags on the latest activity
+        fixed, _ = verify_against_public(c, public)
+        self.assertEqual(fixed.counts[-2:], (6, 5))
+        public["2026-01-04"] = 0  # but a day further back is a real difference
+        with self.assertRaises(CalendarError):
+            verify_against_public(c, public)
+
     def test_unreadable_page_refuses(self):
         c = Calendar(date(2026, 1, 1), tuple([1] * 30))
         with self.assertRaises(CalendarError):

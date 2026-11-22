@@ -89,16 +89,20 @@ def detect_scope(client: GitHubClient, login: str, public_only: bool) -> str:
     return COMPLETE if str(viewer.get("login", "")).lower() == login.lower() else PUBLIC
 
 
+SETTLING_DAYS = 2  # the newest days may still be arriving on the cached public page (and across time zones)
+
+
 def verify_against_public(cal: Calendar, public: dict[str, int | None]) -> tuple[Calendar, list[str]]:
     """Return the calendar a stranger would see, or raise if the API shows anything the public page does not.
 
-    Today is the one exception: the public page is cached and can lag a few minutes behind, so for the last day the
-    smaller of the two numbers wins (never show more than a stranger sees).
+    The newest SETTLING_DAYS are the one exception: the public page is cached and can lag behind for the latest
+    activity (and "today" depends on the time zone), so for those days the smaller of the two numbers wins (never
+    show more than a stranger sees). Any earlier difference means the profile hides something: refuse.
     """
     days = cal.days()
     if sum(1 for d in days if d.date.isoformat() in public) < len(days) - 7:
         raise CalendarError("could not read the public calendar (did GitHub change the page?)")
-    *earlier, last = days
+    earlier, settling = days[:-SETTLING_DAYS], days[-SETTLING_DAYS:]
     differs = [d for d in earlier if public.get(d.date.isoformat(), 0) != d.count]
     if differs:
         raise CalendarError(
@@ -107,10 +111,11 @@ def verify_against_public(cal: Calendar, public: dict[str, int | None]) -> tuple
         )
     notes: list[str] = []
     counts = list(cal.counts)
-    shown = public.get(last.date.isoformat())
-    if isinstance(shown, int) and shown != last.count:
-        counts[-1] = min(shown, last.count)
-        notes.append(f"today is still settling (API {last.count}, public page {shown}); using {counts[-1]}")
+    for d in settling:
+        shown = public.get(d.date.isoformat())
+        if isinstance(shown, int) and shown != d.count:
+            counts[d.index] = min(shown, d.count)
+            notes.append(f"{d.date.isoformat()} is still settling (API {d.count}, public page {shown}); using {counts[d.index]}")
     return Calendar(cal.start, tuple(counts)), notes
 
 
