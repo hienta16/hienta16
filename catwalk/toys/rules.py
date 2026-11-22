@@ -2,8 +2,8 @@
 
     title_prefix    issues must start with this (e.g. "[cat-toy] yarn"); anything else is not a toy request
     cooldown_hours  one accepted gift per GitHub account per rolling window of this many hours
-    max_visible     at most this many toys in the scene; a new gift puts the oldest one away early
-    history_days    how long processed issues are remembered (duplicates, cooldowns). Must cover the cooldown.
+    max_visible     at most this many toys in the scene (1–12); a new gift puts the oldest one away early
+    history_days    how long accepted gifts are remembered (duplicates, cooldowns). Must outlast the cooldown by a day.
     exempt_logins   accounts the cooldown does not apply to (empty by default)
     toys.<key>      label, button text, lifetime_hours, variants (colours), behaviour words, arrival message
 """
@@ -64,8 +64,8 @@ class ToyRules:
             raise ValueError("title_prefix must be 3–24 characters without outer spaces")
         cooldown = timedelta(hours=_whole(raw, "cooldown_hours", 1, 24 * 14))
         history = timedelta(days=_whole(raw, "history_days", 1, 365))
-        if history < cooldown:
-            raise ValueError("history_days must be at least as long as cooldown_hours, or cooldowns are forgotten")
+        if history < cooldown + timedelta(days=1):
+            raise ValueError("history_days must outlast cooldown_hours by at least a day, or cooldowns are forgotten")
         exempt = raw.get("exempt_logins", [])
         if not isinstance(exempt, list) or not all(isinstance(x, str) for x in exempt):
             raise ValueError("exempt_logins must be a list of logins")
@@ -92,7 +92,7 @@ class ToyRules:
         return cls(
             title_prefix=prefix,
             cooldown=cooldown,
-            max_visible=_whole(raw, "max_visible", 1, 50),
+            max_visible=_whole(raw, "max_visible", 1, 12),
             history=history,
             exempt_logins=frozenset(x.lower() for x in exempt),
             kinds=kinds,

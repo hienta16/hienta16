@@ -96,14 +96,22 @@ def cmd_toys(args: argparse.Namespace, paths: Paths) -> int:
         except toys.EventError as exc:
             print(f"bad event: {exc}", file=sys.stderr)
             return 2
+        if not site.toys_live:
+            request = toys.Ignored("the toy box is not live (toys_live is false in config/catwalk.json)")
         if isinstance(request, toys.Ignored):
             print(f"ignored: {request.reason}")
         else:
             state = load_state(paths.toy_state, rules)
             new, decision = toys.handle(state, request, rules, now)
+            if decision.outcome == toys.DUPLICATE:
+                # Already saved, perhaps by a run whose push looked failed: answer as if it were new.
+                # (respond skips issues that are already closed, so nobody is answered twice.)
+                gift = next((g for g in state.active if g.issue == request.issue), None)
+                if gift is not None:
+                    decision = toys.Decision(toys.ACCEPTED, request.issue, gift.toy, gift=gift)
             changed = save_state(paths.toy_state, new) if new != state else False
             result = {
-                "outcome": decision.outcome,
+                "outcome": "duplicate" if state.processed(request.issue) and new == state else decision.outcome,
                 "issue": request.issue,
                 "toy": decision.toy,
                 "login": request.login,
@@ -175,6 +183,10 @@ def _respond(args: argparse.Namespace, rules, site) -> int:
     client = GitHubClient(token)
     number = int(result["issue"])
     try:
+        issue = client.rest(f"repos/{site.hub_repo}/issues/{number}")
+        if isinstance(issue, dict) and issue.get("state") == "closed":
+            print(f"#{number}: already closed, so it was answered before; nothing to add")
+            return 0
         if body:
             client.rest(f"repos/{site.hub_repo}/issues/{number}/comments", method="POST", payload={"body": body})
         if reason:

@@ -17,6 +17,12 @@ def reply_for(decision: Decision | None, rules: ToyRules, login: str, site_url: 
     """The comment body, or None when nothing should be said (duplicates, ignored issues)."""
     outcome = outcome or (decision.outcome if decision else None)
     examples = ", ".join(f"`{rules.title_prefix} {k}`" for k in rules.kinds)
+    if outcome == ACCEPTED and decision and decision.gift and decision.shelved_at_once:
+        kind = rules.kinds[decision.gift.toy]
+        return (
+            f"Thanks, @{login}! Your {kind.label.lower()} arrived, but the toy box was full of newer toys, so it went "
+            "straight onto the shelf. It still counts in the gifts given so far."
+        )
     if outcome == ACCEPTED and decision and decision.gift:
         kind = rules.kinds[decision.gift.toy]
         lines = [

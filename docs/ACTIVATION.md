@@ -31,7 +31,8 @@ happens only when Hien decides. Nothing here is done by the automation itself.
 
 1. In `config/catwalk.json` set `"toys_live": true`, run `python -m catwalk render`, commit, push. The README shows
    the Give buttons.
-2. Add the repository variable `CATWALK_TOYS` = `on`.
+2. Add the repository variable `CATWALK_TOYS` = `on`. Keep `CATWALK_AUTOMATION` on as well: the 6-hourly refresh is
+   what retires expired toys from the README picture when no new gifts arrive.
 3. Test it yourself: open an issue titled `[cat-toy] yarn`. Within a minute the bot replies and closes it, and
    `data/toys.json` lists the yarn. (Add your login to `exempt_logins` in `config/toys.json` if you want to test
    more than once a day.)

@@ -135,6 +135,18 @@ class Client(unittest.TestCase):
             GitHubClient("t", transport=transport, retries=2, sleep=lambda _s: None).rest("x")
         self.assertEqual(len(calls), 3)
 
+    def test_writes_are_never_retried_so_nothing_is_posted_twice(self):
+        calls = []
+
+        def transport(*args):
+            calls.append(args)
+            return Response(502)
+
+        client = GitHubClient("t", transport=transport, retries=3, sleep=lambda _s: None)
+        with self.assertRaises(GitHubError):
+            client.rest("repos/x/y/issues/1/comments", method="POST", payload={"body": "hi"})
+        self.assertEqual(len(calls), 1)
+
     def test_token_is_never_sent_off_api_github_com(self):
         seen = {}
 

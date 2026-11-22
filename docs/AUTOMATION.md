@@ -76,25 +76,35 @@ run `npm run export:art` in the website repository; it writes static copies into
 | Yarn ball | stays 168 hours (7 days); pink or blue, alternating by issue number | `toys.yarn.lifetime_hours` |
 | Feather toy | stays 48 hours | `toys.feather.lifetime_hours` |
 | Cardboard box | stays 336 hours (14 days) | `toys.box.lifetime_hours` |
-| Gifts per account | 1 per rolling 24 hours, by numeric account id (renaming does not reset it), measured on the issues' creation times so processing order does not matter | `cooldown_hours` |
-| Toys in the scene | at most 9; a new gift puts the oldest away early, and the total still counts it | `max_visible` |
-| Memory | processed issues are remembered for 30 days (duplicates, cooldowns); older events are skipped | `history_days` |
+| Gifts per account | 1 per rolling 24 hours, by numeric account id (renaming does not reset it), measured on the issues' creation times: two gifts from one account are never both accepted within 24 hours of each other, whichever run comes first | `cooldown_hours` |
+| Toys in the scene | at most 9 (configurable up to 12); the oldest by creation time goes back on the shelf early, never a newer one, and the total still counts it | `max_visible` |
+| Memory | accepted gifts are remembered for 30 days (duplicates, cooldowns); issues older than 29 days (30 days minus the cooldown) are skipped as stale | `history_days` |
 
 `created_at` is GitHub's issue creation time; `expires_at = created_at + lifetime`, both UTC. A toy leaves the
 scene at exactly `expires_at`: the refresh workflow removes it from `data/toys.json` and the website also hides it
 on its own clock, so an expired toy never shows even between refreshes. `totals` keeps every accepted gift forever.
 
 Outcomes: `accepted` (reply, close as completed), `cooldown`, `unknown_toy`, `not_a_person` (bots and
-organisations), `stale` (reply, close as not planned), `duplicate` (nothing; the issue was already handled) and
-`ignored` (not a toy request at all: no reply, the issue stays open for Hien).
+organisations), `stale` (too old, or would already have expired; reply, close as not planned), `duplicate` (the gift
+was already saved: the answer is rebuilt in case it was never sent, and skipped if the issue is already closed) and
+`ignored` (not a toy request, or the toy box is not live: no reply, the issue stays open for Hien).
+
+Only accepted gifts change `data/toys.json`. Refusals are answered on the issue but never saved, so a flood of bad
+requests produces no commits and cannot crowd real gifts out of the retry loop. The retry time in a cooldown reply is
+rounded up to the next minute.
 
 ## Security choices
 
-* Workflows declare `permissions: {}` at the top and grant `contents: write` (and `issues: write` for the toy box)
-  only to the job that needs it. Actions are pinned to full commit SHAs.
+* Workflows declare `permissions: {}` at the top and grant each job only what it needs. The toy box runs as two
+  jobs: `record` can write the repository but not issues; `reply` can write issues but only read the repository.
+  Actions are pinned to full commit SHAs.
+* Writes to the GitHub API (a comment, closing an issue) are never retried after a server error, so nothing is
+  posted twice; the reply step also skips an issue that is already closed.
 * The issue title and body never reach a shell or an expression: Python reads `$GITHUB_EVENT_PATH`.
 * The title is matched against a fixed list; the body is ignored; the login is re-validated (letters, digits,
   single hyphens) before it is stored, drawn or mentioned.
 * State files are validated on load. A corrupt file stops the run rather than being overwritten.
-* Writers retry from the newest `main` (fetch, reset, re-apply), so two events at once never lose a gift, and the
-  dedupe ledger makes re-applying safe.
+* Writers retry from the newest `main` (fetch, reset, re-apply) up to 8 times with a random pause, so two events
+  at once never lose a gift, and the dedupe ledger makes re-applying safe.
+* The live switch is enforced twice: the workflow needs `CATWALK_TOYS=on`, and Python ignores every issue while
+  `toys_live` is false in `config/catwalk.json`.

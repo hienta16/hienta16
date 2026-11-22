@@ -1,12 +1,15 @@
 # The cat's toy box: a visitor opens an issue titled "[cat-toy] yarn" (or feather, box), Python checks it,
-# records the gift, redraws the toy box, then replies on the issue and closes it.
+# records the gift and redraws the toy box; a second job replies on the issue and closes it.
 #
-# Switched OFF until Hien approves: runs only when the repository variable CATWALK_TOYS is "on", and issue events
-# only ever run the workflow file on the default branch. See docs/ACTIVATION.md.
+# Switched OFF until Hien approves: runs only when the repository variable CATWALK_TOYS is "on" (and
+# config/catwalk.json says toys_live: true), and issue events only ever run the workflow file on the default branch.
+# See docs/ACTIVATION.md.
 #
 # Safety: the issue title and body never reach a shell. Python reads the event payload file GitHub wrote
 # ($GITHUB_EVENT_PATH), trusts only GitHub-set fields (author id and type, issue number, creation time) and matches
 # the title against a fixed list of toys. One gift per account per rolling 24 hours is enforced in Python, here.
+# Refusals are answered but never saved, so a flood of bad requests makes no commits.
+# Each job holds only the permission it needs: "record" can write the repository, "reply" can write issues.
 
 name: Cat toys
 
@@ -17,7 +20,7 @@ on:
 permissions: {}
 
 jobs:
-  gift:
+  record:
     if: >-
       vars.CATWALK_TOYS == 'on' &&
       github.event.issue.pull_request == null &&
@@ -26,7 +29,9 @@ jobs:
     timeout-minutes: 6
     permissions:
       contents: write
-      issues: write
+    outputs:
+      result: ${{ steps.save.outputs.result }}
+      pushed: ${{ steps.save.outputs.pushed }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -34,33 +39,57 @@ jobs:
           python-version: "3.12"
 
       - name: Check and record the gift, redraw, commit
+        id: save
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           result="$RUNNER_TEMP/cat-toy-result.json"
-          for attempt in 1 2 3 4 5; do
-            # always start from the newest state, so two gifts at once are both kept (duplicates are detected)
+          pushed=false
+          for attempt in 1 2 3 4 5 6 7 8; do
+            # always start from the newest state, so gifts arriving together are all kept (duplicates are detected)
             git fetch --quiet origin main
             git reset --hard --quiet origin/main
             python -m catwalk toys handle --event "$GITHUB_EVENT_PATH" --result "$result"
             python -m catwalk render --only toybox,readme || echo "::warning::Redraw failed; the gift is saved and the next refresh draws it."
             git add data/toys.json assets/generated README.md
             if git diff --cached --quiet; then
-              touch "$RUNNER_TEMP/pushed"
-              exit 0
+              pushed=true
+              break
             fi
             git commit --quiet --message "$(python -m catwalk toys commit-message --result "$result")"
             if git push --quiet origin HEAD:main; then
-              touch "$RUNNER_TEMP/pushed"
-              exit 0
+              pushed=true
+              break
             fi
-            sleep $((attempt * 3))
+            sleep $(( attempt * 2 + RANDOM % 6 ))
           done
-          echo "Could not save the gift after 5 attempts."
-          exit 1
+          echo "pushed=$pushed" >> "$GITHUB_OUTPUT"
+          if [ -s "$result" ]; then
+            echo "result=$(base64 -w0 "$result")" >> "$GITHUB_OUTPUT"
+          fi
+          [ "$pushed" = true ]
 
-      - name: Reply on the issue and close it
-        if: always()
+  reply:
+    needs: record
+    if: always() && needs.record.result != 'skipped' && needs.record.outputs.result != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Reply on the issue and close it (skipped if it is already closed)
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python -m catwalk toys respond --result "$RUNNER_TEMP/cat-toy-result.json" --pushed-marker "$RUNNER_TEMP/pushed"
+          RESULT_B64: ${{ needs.record.outputs.result }}
+          PUSHED: ${{ needs.record.outputs.pushed }}
+        run: |
+          printf '%s' "$RESULT_B64" | base64 -d > "$RUNNER_TEMP/result.json"
+          if [ "$PUSHED" = "true" ]; then touch "$RUNNER_TEMP/pushed"; fi
+          python -m catwalk toys respond --result "$RUNNER_TEMP/result.json" --pushed-marker "$RUNNER_TEMP/pushed"

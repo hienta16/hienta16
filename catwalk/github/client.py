@@ -83,7 +83,14 @@ class GitHubClient:
     # ---- low level -------------------------------------------------------------------------------------------
 
     def request(
-        self, method: str, url: str, *, auth: bool = True, body: bytes | None = None, accept: str = "application/vnd.github+json"
+        self,
+        method: str,
+        url: str,
+        *,
+        auth: bool = True,
+        body: bytes | None = None,
+        accept: str = "application/vnd.github+json",
+        retry: bool = True,
     ) -> Response:
         headers = {"User-Agent": USER_AGENT, "Accept": accept}
         if auth and self.token and url.startswith(API + "/"):
@@ -105,8 +112,10 @@ class GitHubClient:
                     last = GitHubError(f"GitHub answered {reply.status} for {_where(url)}")
                 else:
                     return reply
-            if attempt < self.retries:
+            if attempt < self.retries and retry:
                 self.sleep(min(2**attempt, 8))
+            elif not retry:
+                break
         raise last
 
     # ---- helpers -----------------------------------------------------------------------------------------------
@@ -133,7 +142,8 @@ class GitHubClient:
         if params:
             url += "?" + urllib.parse.urlencode(params)
         body = json.dumps(payload).encode("utf-8") if payload is not None else None
-        reply = self.request(method, url, auth=auth, body=body)
+        # Reads are retried; writes (a comment, closing an issue) are not, so nothing is ever posted twice.
+        reply = self.request(method, url, auth=auth, body=body, retry=method == "GET")
         if reply.status >= 400:
             raise GitHubError(f"REST {method} /{path.split('?')[0].lstrip('/')} answered {reply.status}")
         return reply.json()

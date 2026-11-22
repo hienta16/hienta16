@@ -41,6 +41,12 @@ def parse_date(value: object) -> date:
     return date.fromisoformat(value)
 
 
+def ceil_minute(moment: datetime) -> datetime:
+    """Round up to the next whole minute, so a time shown to the minute is never earlier than the real one."""
+    floor = moment.replace(second=0, microsecond=0)
+    return floor if floor == moment else floor + timedelta(minutes=1)
+
+
 def human_utc(moment: datetime) -> str:
     """'Sat 30 Nov 2026, 14:05 UTC': for replies and image captions."""
     m = moment.astimezone(UTC)

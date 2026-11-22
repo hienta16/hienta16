@@ -10,6 +10,7 @@ Only what is needed is stored: the giver's public login (shown as "from @login")
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 
@@ -17,6 +18,7 @@ from ..config import LOGIN_RE
 from ..timeutil import iso, parse_ts
 
 SCHEMA = 1
+_WORD = re.compile(r"^[a-z]{2,16}$")
 
 
 class StateError(ValueError):
@@ -75,6 +77,8 @@ class Gift:
             raise StateError(f"malformed gift: {exc}") from exc
         if gift.expires_at <= gift.created_at:
             raise StateError(f"gift {gift.id} expires before it was created")
+        if not _WORD.fullmatch(gift.toy) or not _WORD.fullmatch(gift.variant):
+            raise StateError(f"gift {gift.id} has an odd toy or variant name")
         return gift
 
 

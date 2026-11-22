@@ -82,6 +82,9 @@ class Events(unittest.TestCase):
         req = request()
         self.assertEqual((req.issue, req.login, req.user_id, req.toy), (1, "visitor", 101, "yarn"))
 
+    def test_older_logins_with_double_hyphens_are_accepted(self):
+        self.assertEqual(request(login="old--name-").login, "old--name-")
+
     def test_ignored_events(self):
         cases = [
             event(action="edited"),
@@ -143,10 +146,15 @@ class Rules(unittest.TestCase):
         _, d = give(state, number=3, login="old-name", uid=8, created="2026-12-01T11:59:30Z")
         self.assertEqual(d.outcome, ACCEPTED)  # a different account that took the old login
 
-    def test_cooldown_does_not_depend_on_processing_order(self):
+    def test_two_gifts_within_a_day_are_never_both_accepted_whichever_runs_first(self):
         later, _ = give(empty(), number=2, created="2026-12-01T11:00:00Z")
         _, d = give(later, number=1, created="2026-12-01T09:00:00Z")  # the earlier issue arrives second
         self.assertEqual(d.outcome, COOLDOWN)
+
+    def test_retry_time_is_rounded_up_to_the_minute(self):
+        state, _ = give(empty(), number=1, created="2026-12-01T10:00:30Z")
+        _, d = give(state, number=2, created="2026-12-01T11:00:00Z")
+        self.assertEqual(d.retry_after, at("2026-12-02T10:01:00Z"))
 
     def test_refusals_do_not_count_towards_the_cooldown(self):
         state, d = give(empty(), number=1, title="[cat-toy] laser")
@@ -174,15 +182,37 @@ class Rules(unittest.TestCase):
         self.assertIsNone(reply_for(d, RULES, "visitor", "https://x"))
         self.assertIsNone(close_reason(d.outcome))
 
-    def test_refused_requests_are_remembered_as_duplicates_too(self):
-        state, _ = give(empty(), number=5, title="[cat-toy] laser")
-        _, d = give(state, number=5, title="[cat-toy] laser")
-        self.assertEqual(d.outcome, DUPLICATE)
+    def test_refusals_are_answered_but_never_saved(self):
+        accepted, _ = give(empty(), number=1)
+        for kw in (
+            {"number": 2, "title": "[cat-toy] laser"},
+            {"number": 3, "kind": "Bot", "login": "helper[bot]"},
+            {"number": 4, "created": "2026-12-01T11:59:30Z"},  # cooldown
+        ):
+            state, d = give(accepted, **kw)
+            self.assertNotEqual(d.outcome, ACCEPTED)
+            self.assertIs(state, accepted)  # nothing to commit, so a flood of bad requests makes no commits
 
     def test_stale_events_are_skipped_without_a_trace(self):
         state, d = give(empty(), created="2026-10-01T00:00:00Z")
         self.assertEqual(d.outcome, STALE)
         self.assertEqual(state, empty())
+
+    def test_events_older_than_the_remembered_cooldowns_are_stale(self):
+        # history 30 days, cooldown 24 hours: anything older than 29 days could slip past a forgotten gift.
+        # A 60-day yarn isolates this rule from the "already expired" one.
+        base = json.loads((ROOT / "config" / "toys.json").read_text())
+        base["toys"]["yarn"]["lifetime_hours"] = 24 * 60
+        rules = ToyRules.from_dict(base)
+        _, d = handle(empty(), request(created="2026-11-02T11:00:00Z"), rules, NOW)
+        self.assertEqual(d.outcome, STALE)
+        _, d = handle(empty(), request(created="2026-11-02T13:00:00Z"), rules, NOW)
+        self.assertEqual(d.outcome, ACCEPTED)
+
+    def test_a_gift_that_would_already_have_expired_is_not_counted(self):
+        state, d = give(empty(), title="[cat-toy] feather", created="2026-11-28T11:00:00Z")  # 48 h toy, 73 h late
+        self.assertEqual(d.outcome, STALE)
+        self.assertEqual(state.totals["feather"], 0)
 
     def test_future_timestamps_are_clamped(self):
         _, d = give(empty(), created="2027-01-01T00:00:00Z")
@@ -197,6 +227,18 @@ class Rules(unittest.TestCase):
         self.assertEqual(d.displaced[0].issue, 1)
         self.assertEqual(len(visible(state, NOW)), RULES.max_visible)
         self.assertEqual(state.totals["yarn"], RULES.max_visible + 1)
+
+    def test_a_late_older_gift_never_puts_away_a_newer_toy(self):
+        state = empty()
+        for i in range(RULES.max_visible):
+            state, _ = give(state, number=i + 1, uid=1000 + i, created=f"2026-12-01T1{i % 2}:0{i}:00Z")
+        before = {g.id for g in visible(state, NOW)}
+        state, d = give(state, number=99, uid=5000, created="2026-12-01T01:00:00Z")  # older than all of them
+        self.assertEqual(d.outcome, ACCEPTED)
+        self.assertTrue(d.shelved_at_once)
+        self.assertEqual({g.id for g in visible(state, NOW)}, before)
+        self.assertEqual(state.totals["yarn"], RULES.max_visible + 1)
+        self.assertIn("straight onto the shelf", reply_for(d, RULES, "visitor", "https://x"))
 
 
 class Expiry(unittest.TestCase):
@@ -264,6 +306,8 @@ class Config(unittest.TestCase):
             {"cooldown_hours": 0},
             {"max_visible": 500},
             {"history_days": 0},
+            {"history_days": 1},  # must outlast the 24-hour cooldown by a day
+            {"max_visible": 13},
             {"toys": {}},
             {"toys": {"Yarn!": base["toys"]["yarn"]}},
             {"toys": {"yarn": {**base["toys"]["yarn"], "lifetime_hours": -1}}},

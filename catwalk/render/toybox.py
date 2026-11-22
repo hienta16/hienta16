@@ -14,11 +14,14 @@ from ..toys.models import ToyState
 from ..toys.rules import ToyRules
 from ..timeutil import duration_words
 from . import art
-from .svg import document, esc, f, text
+from .svg import document, f, text
 from .theme import CREAM, INK, INK_2, PALE, PINK
 
 # Where toys land on the rug, nearest the cat first (x centre, y of the toy's bottom edge)
-SLOTS = ((300, 396), (690, 402), (190, 438), (770, 440), (414, 452), (584, 456), (110, 404), (860, 410), (500, 472))
+SLOTS = (
+    (300, 396), (690, 402), (190, 438), (770, 440), (414, 452), (584, 456),
+    (110, 404), (860, 410), (500, 472), (262, 478), (730, 480), (610, 412),
+)
 
 
 def _toy_art(toy: str, variant: str) -> str:
@@ -85,8 +88,9 @@ def render(paths: Paths, site: SiteConfig, rules: ToyRules, state: ToyState, now
         H,
         body,
         title="The cat's toy box",
-        desc=esc(f"Hien's tortoiseshell cat on a rug with {len(live)} toy(s): {names}. {given} gifts so far."),
+        desc=f"Hien's tortoiseshell cat on a rug with {len(live)} toy(s): {names}. {given} gifts so far.",
     )
 
 
 __all__ = ["render", "SLOTS", "f"]
+assert len(SLOTS) >= 12, "one place on the rug for every toy the rules allow"

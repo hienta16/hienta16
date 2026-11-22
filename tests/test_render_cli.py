@@ -20,8 +20,11 @@ from helpers import ROOT, at, temp_root
 NOW = at("2026-11-23T06:00:00Z")
 
 
-def seeded():
+def seeded(live=True):
     paths = temp_root()
+    if live:
+        cfg = read_json(paths.site_config)
+        write_json(paths.site_config, {**cfg, "hub_public": True, "toys_live": True})
     shutil.copy(ROOT / "data" / "github.json", paths.root / "data.json")
     (paths.root / "data").mkdir(exist_ok=True)
     shutil.copy(ROOT / "data" / "github.json", paths.github_data)
@@ -69,7 +72,7 @@ class Render(unittest.TestCase):
         self.assertIn("n/a", (paths.generated / "stats.svg").read_text(encoding="utf-8"))
 
     def test_toy_buttons_only_when_live(self):
-        paths = seeded()
+        paths = seeded(live=False)
         render_all(paths, only={"readme"}, now=NOW)
         self.assertNotIn("issues/new", paths.readme.read_text(encoding="utf-8"))
         cfg = read_json(paths.site_config)
@@ -114,12 +117,30 @@ class Cli(unittest.TestCase):
         self.assertIn("Your cardboard box has arrived", r["reply"])
         state = read_json(paths.toy_state)
         self.assertEqual(state["active"][0]["expiresAt"], "2026-12-07T05:00:00Z")
-        # the same event again: nothing changes, nothing to say
+        # the same event again: nothing changes; the answer is rebuilt in case the first run never sent it
+        # (respond skips an issue that is already closed, so nobody is answered twice)
         code, _ = run("--root", str(paths.root), "toys", "handle", "--event", str(ev), "--result", str(result), "--now", "2026-11-23T05:02:00Z")
-        self.assertEqual((code, read_json(result)["outcome"], read_json(result)["reply"]), (0, "duplicate", None))
+        again = read_json(result)
+        self.assertEqual((code, again["outcome"], again["close"]), (0, "duplicate", "completed"))
+        self.assertIn("Your cardboard box has arrived", again["reply"])
         self.assertEqual(read_json(paths.toy_state), state)
         code, out = run("--root", str(paths.root), "toys", "commit-message", "--result", str(result))
         self.assertIn("#12", out)
+
+    def test_nothing_is_accepted_while_the_toy_box_is_not_live(self):
+        paths = seeded(live=False)
+        ev = paths.root / "event.json"
+        result = paths.root / "result.json"
+        payload = {
+            "action": "opened",
+            "repository": {"full_name": "hienta16/hienta16"},
+            "issue": {"number": 3, "title": "[cat-toy] yarn", "created_at": "2026-11-23T05:00:00Z", "user": {"login": "early-bird", "id": 9, "type": "User"}},
+        }
+        ev.write_text(json.dumps(payload), encoding="utf-8")
+        code, out = run("--root", str(paths.root), "toys", "handle", "--event", str(ev), "--result", str(result))
+        self.assertEqual((code, read_json(result)["outcome"]), (0, "ignored"))
+        self.assertIn("not live", out)
+        self.assertFalse(paths.toy_state.exists())
 
     def test_bad_event_exits_2_and_writes_nothing(self):
         paths = seeded()

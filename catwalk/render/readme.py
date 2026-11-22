@@ -10,6 +10,7 @@ a pre-filled issue, and the moving, reacting cat lives on the website.
 from __future__ import annotations
 
 import re
+from html import escape
 from datetime import datetime
 from urllib.parse import quote, urlencode
 
@@ -49,7 +50,7 @@ def toys_section(site: SiteConfig, rules: ToyRules) -> str:
     ]
     if site.toys_live:
         buttons = "\n".join(
-            f'  <a href="{issue_link(site, rules, key).replace("&", "&amp;")}"><img src="assets/generated/btn-{key}.svg" height="44" alt="{kind.action}"></a>'
+            f'  <a href="{issue_link(site, rules, key).replace("&", "&amp;")}"><img src="assets/generated/btn-{key}.svg" height="44" alt="{escape(kind.action)}"></a>'
             for key, kind in rules.kinds.items()
         )
         lead = [
