@@ -4,8 +4,9 @@ measuring tape with week ticks and month names.
 Design choices (v3):
 * Camera: the grid is turned 18° and seen from 40° above, so the year runs gently down to the right instead of
   a steep diagonal. Weekday rows recede; the tops of the blocks stay readable as a grid.
-* Height is stepped by level (the same five levels as the legend) and kept low: the busiest level stands just under
-  one cell tall, so a single busy day cannot tower over the year. No peak is labelled.
+* Height is the data (see column_height): linear in each day's real contribution count, scaled so the busiest day
+  in the displayed range stands MAX_H cells tall (about 55-60 px on a desktop screen, roughly 1.5 cm). Colour still
+  follows the five legend levels, so two days of the same colour can differ in height. No peak is labelled.
 * Faces are shaded from the level colour toward ink (top lit, front a step darker, side darker still).
 
 Two variants share the geometry:
@@ -26,7 +27,12 @@ from .theme import CREAM, INK, INK_3, LEVEL_TOP, NIGHT_2, PINK, mix
 THETA = radians(18)
 PHI = radians(40)
 GAP = 0.14
-LEVEL_H = (0.0, 0.24, 0.42, 0.64, 0.9)
+# Column heights, in cell widths (one cell = one day's footprint). The busiest day is meant to stand about
+# 55-60 px on a desktop screen (roughly 1.5 cm). The two surfaces draw cells at different sizes, so each has its own:
+MAX_H_SITE = 5.6  # website dashboard at 1440 px: one cell height = ~10.4 px, so the busiest day is ~58 px
+MAX_H_README = 4.9  # README card shown ~896 px wide on github.com: one cell height = ~11.8 px, so ~58 px
+MAX_H = MAX_H_SITE
+MIN_H = 0.3  # any day with a contribution stands at least this tall (~3 px), so it never sinks into the slab
 SLAB_DEPTH = 0.82
 SLAB_PAD = 0.42
 SLAB_TOP = "#2C2F4A"
@@ -65,15 +71,46 @@ class Scene:
         return self.max_y - self.min_y
 
 
-def _extent(cal: Calendar, p: Projection) -> tuple[float, float, float, float]:
+def column_height(count: int, busiest: int, max_h: float = MAX_H) -> float:
+    """How tall a day's column stands, in cell widths. Deterministic and linear in the real count:
+
+        h = max_h * count / busiest        busiest = the highest daily count in the displayed range
+        h = max(h, MIN_H)                  for any day with at least one contribution
+        h = 0                              for a day with none (a flat tile on the slab)
+
+    So the busiest day is exactly max_h tall, a day with half its count is half as tall, and a quiet day with one or
+    two contributions still clears the slab. Nothing is stepped, so equal colours do not mean equal heights.
+    """
+    if count <= 0 or busiest <= 0:
+        return 0.0
+    return max(MIN_H, max_h * min(count, busiest) / busiest)
+
+
+def _busiest(cal: Calendar) -> int:
+    return max(cal.counts, default=0)
+
+
+def _cell(cal: Calendar, day: Day) -> tuple[float, float, float, float]:
+    wk = cal.week_of(day)
+    return wk + GAP, wk + 1 - GAP, day.row + GAP, day.row + 1 - GAP
+
+
+def _extent(cal: Calendar, p: Projection, max_h: float) -> tuple[float, float, float, float]:
+    """The drawing's bounding box: the slab plus the actual tops of the columns (not a worst case)."""
     w = cal.weeks
     u0, u1, v0, v1 = -SLAB_PAD, w + SLAB_PAD, -SLAB_PAD, 7 + SLAB_PAD
-    corners = [p(u0, v0, LEVEL_H[-1]), p(u1, v0, LEVEL_H[-1]), p(u0, v1, -SLAB_DEPTH), p(u1, v1, -SLAB_DEPTH), p(u0, v1, 0), p(u1, v0, 0)]
-    xs, ys = [c[0] for c in corners], [c[1] for c in corners]
+    points = [p(u0, v0), p(u1, v0), p(u0, v1, -SLAB_DEPTH), p(u1, v1, -SLAB_DEPTH), p(u0, v1), p(u1, v0)]
+    busiest = _busiest(cal)
+    for day in cal.days():
+        h = column_height(day.count, busiest, max_h)
+        if h:
+            a0, a1, b0, b1 = _cell(cal, day)
+            points += [p(a0, b0, h), p(a1, b0, h), p(a0, b1, h), p(a1, b1, h)]
+    xs, ys = [c[0] for c in points], [c[1] for c in points]
     return min(xs), min(ys), max(xs), max(ys)
 
 
-def draw(cal: Calendar, p: Projection, *, interactive: bool) -> str:
+def draw(cal: Calendar, p: Projection, *, interactive: bool, max_h: float) -> str:
     """The slab, the tape and the blocks, drawn back to front."""
     w = cal.weeks
     days = cal.days()
@@ -107,19 +144,19 @@ def draw(cal: Calendar, p: Projection, *, interactive: bool) -> str:
             )
     # blocks: back row first, left to right, so nearer blocks overlap farther ones
     order = sorted(days, key=lambda dd: (dd.row, cal.week_of(dd)))
+    busiest = _busiest(cal)
     out.append('<g class="iso-blocks">')
     for day in order:
-        out.append(_block(cal, day, p, interactive))
+        out.append(_block(cal, day, p, interactive, busiest, max_h))
     out.append("</g>")
     return "".join(out)
 
 
-def _block(cal: Calendar, day: Day, p: Projection, interactive: bool) -> str:
+def _block(cal: Calendar, day: Day, p: Projection, interactive: bool, busiest: int, max_h: float) -> str:
     level = level_of(day.count)
     wk = cal.week_of(day)
-    a0, a1 = wk + GAP, wk + 1 - GAP
-    b0, b1 = day.row + GAP, day.row + 1 - GAP
-    h = LEVEL_H[level]
+    a0, a1, b0, b1 = _cell(cal, day)
+    h = column_height(day.count, busiest, max_h)
     top = LEVEL_TOP[level]
     faces = []
     if h > 0:
@@ -128,7 +165,7 @@ def _block(cal: Calendar, day: Day, p: Projection, interactive: bool) -> str:
     faces.append((pts([p(a0, b0, h), p(a1, b0, h), p(a1, b1, h), p(a0, b1, h)]), top, "t"))
     polys = "".join(f'<polygon points="{d}" fill="{c}" class="iso-{k}"/>' for d, c, k in faces)
     if not interactive:
-        return polys if h > 0 else polys
+        return polys
     base = p((a0 + a1) / 2, (b0 + b1) / 2)
     return (
         f'<g class="iso-b iso-l{level}" data-date="{day.date.isoformat()}" data-count="{day.count}" '
@@ -136,12 +173,12 @@ def _block(cal: Calendar, day: Day, p: Projection, interactive: bool) -> str:
     )
 
 
-def scene(cal: Calendar, scale: float, *, interactive: bool) -> Scene:
+def scene(cal: Calendar, scale: float, *, interactive: bool, max_h: float = MAX_H_SITE) -> Scene:
     p = Projection(scale)
-    x0, y0, x1, y1 = _extent(cal, p)
+    x0, y0, x1, y1 = _extent(cal, p, max_h)
     pad = scale * 0.35
     p = p.moved(-x0 + pad, -y0 + pad)
-    return Scene(draw(cal, p, interactive=interactive), 0, 0, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad)
+    return Scene(draw(cal, p, interactive=interactive, max_h=max_h), 0, 0, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad)
 
 
 def site_svg(cal: Calendar, *, scale: float = 18.0, label: str = "") -> str:
@@ -158,17 +195,23 @@ def readme_svg(paths: Paths, cal: Calendar, *, refreshed: str, profile_url: str)
     margin = 44
     scale = (W - 2 * margin) / ((cal.weeks + 2 * SLAB_PAD) * cos(THETA) + (7 + 2 * SLAB_PAD) * sin(THETA))
     p = Projection(scale)
-    x0, y0, x1, y1 = _extent(cal, p)
+    x0, y0, x1, y1 = _extent(cal, p, MAX_H_README)
     total = f"{cal.total:,}"
     head_h = 118
     # Headline in the empty top-right corner: push the year down only as far as the corner needs.
     title_w = measure(paths, "A year in blocks", "black", 44)
     head_left = W - margin - max(title_w, 360)
-    # The back edge of the year (at the tallest possible block) slopes down to the right. Find how far below the
-    # top of the drawing it passes under the headline's left edge, and push the drawing down only if it must.
-    bl, br = p(-SLAB_PAD, -SLAB_PAD, LEVEL_H[-1]), p(cal.weeks + SLAB_PAD, -SLAB_PAD, LEVEL_H[-1])
-    under = head_left - margin + x0
-    drop = bl[1] + (under - bl[0]) / (br[0] - bl[0]) * (br[1] - bl[1]) - y0
+    # The headline sits in the empty top-right corner. Find the highest column top (or slab corner) under it and
+    # push the drawing down only as far as needed to keep them apart.
+    busiest = _busiest(cal)
+    under: list[float] = [p(cal.weeks + SLAB_PAD, -SLAB_PAD)[1]]
+    for day in cal.days():
+        h = column_height(day.count, busiest, MAX_H_README)
+        a0, a1, b0, b1 = _cell(cal, day)
+        for pt in (p(a0, b0, h), p(a1, b0, h)):
+            if pt[0] - x0 + margin >= head_left - 12:
+                under.append(pt[1])
+    drop = min(under) - y0
     top = max(margin, margin + head_h + 18 - drop)
     p = p.moved(-x0 + margin, -y0 + top)
     body_h = (y1 - y0) + top
@@ -186,11 +229,11 @@ def readme_svg(paths: Paths, cal: Calendar, *, refreshed: str, profile_url: str)
 
     body = (
         f'<rect width="{W}" height="{H}" rx="28" fill="{INK}"/>'
-        + draw(cal, p, interactive=False)
+        + draw(cal, p, interactive=False, max_h=MAX_H_README)
         + text(W - margin, margin + 46, "A year in blocks", "black", 44, CREAM, "end")
         + text(W - margin, margin + 76, f"{total} contributions · {_span(cal)}", "bold", 18, PINK, "end")
         + "".join(legend)
-        + text(margin, H - 30, f"One block per day · levels {ranges} · refreshed {refreshed}", "text", 14, NIGHT_2)
+        + text(margin, H - 30, f"One block per day · height = that day's contributions · colour levels {ranges} · refreshed {refreshed}", "text", 14, NIGHT_2)
     )
     return document(
         paths,
@@ -208,4 +251,4 @@ def _span(cal: Calendar) -> str:
     return f"{a.day} {a:%b %Y} – {b.day} {b:%b %Y}"
 
 
-__all__ = ["readme_svg", "site_svg", "scene", "Projection", "LEVEL_H", "INK_3"]
+__all__ = ["readme_svg", "site_svg", "scene", "column_height", "Projection", "MAX_H", "MAX_H_README", "MAX_H_SITE", "MIN_H", "INK_3"]

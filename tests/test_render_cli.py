@@ -58,6 +58,17 @@ class Render(unittest.TestCase):
         self.assertEqual(len(blocks), len(snap["calendar"]["days"]))
         self.assertEqual(sum(int(b.get("data-count")) for b in blocks), snap["calendar"]["total"])
 
+    def test_column_height_is_linear_in_the_real_count(self):
+        from catwalk.render.iso import MIN_H, column_height
+
+        self.assertEqual(column_height(0, 120), 0.0)
+        self.assertAlmostEqual(column_height(120, 120, 5.0), 5.0)
+        self.assertAlmostEqual(column_height(60, 120, 5.0), 2.5)  # half the count, half the height
+        self.assertAlmostEqual(column_height(30, 120, 5.0), 1.25)
+        self.assertEqual(column_height(1, 120, 5.0), MIN_H)  # a quiet day still clears the slab
+        # two days in the same colour level (41+) are not the same height
+        self.assertNotEqual(column_height(45, 120, 5.0), column_height(110, 120, 5.0))
+
     def test_rendering_twice_changes_nothing(self):
         paths = seeded()
         render_all(paths, now=NOW)
