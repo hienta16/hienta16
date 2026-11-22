@@ -1,0 +1,12 @@
+[project]
+name = "catwalk"
+version = "1.0.0"
+description = "The Python automation behind Hien Ta's GitHub profile and website: stats, SVGs and the cat's toy box"
+requires-python = ">=3.12"
+dependencies = []  # standard library only
+
+[project.optional-dependencies]
+fonts = ["fonttools", "brotli"]  # tools/build_font.py only, on a developer machine
+
+[tool.ruff]
+line-length = 140

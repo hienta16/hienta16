@@ -1,0 +1,60 @@
+# Refresh the GitHub stats, retire expired toys and redraw every image, every 6 hours.
+#
+# Switched OFF until Hien approves: the job only runs when the repository variable CATWALK_AUTOMATION is "on"
+# (Settings → Secrets and variables → Actions → Variables). Schedules also only run on the default branch.
+# Optional secret CATWALK_STATS_TOKEN (a personal token with read access to private repositories) lets the counts
+# include private repositories; without it, the last complete counts are kept and marked with their date.
+# Commits are made by github-actions[bot], so they never count as Hien's own contributions or commits.
+
+name: Refresh stats
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: catwalk-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: vars.CATWALK_AUTOMATION == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Refresh, expire, redraw and commit (retries if a toy gift lands at the same moment)
+        env:
+          CATWALK_STATS_TOKEN: ${{ secrets.CATWALK_STATS_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            git fetch --quiet origin main
+            git reset --hard --quiet origin/main
+            python -m catwalk refresh --soft
+            python -m catwalk toys expire
+            python -m catwalk render
+            git add data assets/generated README.md
+            if git diff --cached --quiet; then
+              echo "Nothing changed."
+              exit 0
+            fi
+            git commit --quiet --message "chore(stats): refresh GitHub stats and redraw"
+            if git push --quiet origin HEAD:main; then
+              exit 0
+            fi
+            sleep $((attempt * 5))
+          done
+          echo "Could not push after 5 attempts."
+          exit 1

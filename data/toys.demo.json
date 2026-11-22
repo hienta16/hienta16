@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "updatedAt": "2026-11-22T18:50:58Z",
+  "active": [
+    {
+      "id": "gift-1",
+      "toy": "yarn",
+      "variant": "blue",
+      "issue": 1,
+      "giver": {
+        "login": "example-visitor-1",
+        "id": 9000001
+      },
+      "createdAt": "2026-11-16T15:49:58Z",
+      "expiresAt": "2026-11-23T15:49:58Z",
+      "source": "github-issue"
+    },
+    {
+      "id": "gift-4",
+      "toy": "box",
+      "variant": "kraft",
+      "issue": 4,
+      "giver": {
+        "login": "example-visitor-3",
+        "id": 9000003
+      },
+      "createdAt": "2026-11-21T05:49:58Z",
+      "expiresAt": "2026-12-05T05:49:58Z",
+      "source": "github-issue"
+    },
+    {
+      "id": "gift-8",
+      "toy": "yarn",
+      "variant": "pink",
+      "issue": 8,
+      "giver": {
+        "login": "example-visitor-4",
+        "id": 9000004
+      },
+      "createdAt": "2026-11-22T18:49:58Z",
+      "expiresAt": "2026-11-29T18:49:58Z",
+      "source": "github-issue"
+    }
+  ],
+  "totals": {
+    "box": 1,
+    "feather": 1,
+    "yarn": 2
+  },
+  "giftsTotal": 4,
+  "ledger": [
+    {
+      "issue": 1,
+      "outcome": "accepted",
+      "at": "2026-11-16T15:49:58Z",
+      "processedAt": "2026-11-16T15:50:58Z",
+      "userId": 9000001,
+      "toy": "yarn"
+    },
+    {
+      "issue": 2,
+      "outcome": "cooldown",
+      "at": "2026-11-16T17:49:58Z",
+      "processedAt": "2026-11-16T17:50:58Z",
+      "userId": 9000001,
+      "toy": "feather"
+    },
+    {
+      "issue": 3,
+      "outcome": "accepted",
+      "at": "2026-11-19T21:49:58Z",
+      "processedAt": "2026-11-19T21:50:58Z",
+      "userId": 9000002,
+      "toy": "feather"
+    },
+    {
+      "issue": 4,
+      "outcome": "accepted",
+      "at": "2026-11-21T05:49:58Z",
+      "processedAt": "2026-11-21T05:50:58Z",
+      "userId": 9000003,
+      "toy": "box"
+    },
+    {
+      "issue": 5,
+      "outcome": "unknown_toy",
+      "at": "2026-11-22T01:49:58Z",
+      "processedAt": "2026-11-22T01:50:58Z",
+      "userId": 9000002
+    },
+    {
+      "issue": 6,
+      "outcome": "not_a_person",
+      "at": "2026-11-22T16:49:58Z",
+      "processedAt": "2026-11-22T16:50:58Z",
+      "userId": 9000009,
+      "toy": "yarn"
+    },
+    {
+      "issue": 8,
+      "outcome": "accepted",
+      "at": "2026-11-22T18:49:58Z",
+      "processedAt": "2026-11-22T18:50:58Z",
+      "userId": 9000004,
+      "toy": "yarn"
+    }
+  ],
+  "demo": true
+}
