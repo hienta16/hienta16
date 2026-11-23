@@ -1,12 +1,14 @@
 """Drawing: pure functions from the data files to SVG text. render_all() writes every image and README section.
 
     banner.svg       hello, the role, the tortoiseshell cat, the measuring tape with the ruler cat walking
+    banner-dark.svg  the same after dark, with the black-and-white cat (GitHub's dark theme shows it)
     stats.svg        contributions, commits I authored, PRs, issues, streaks (with the refresh time)
     iso.svg          the 3D contribution year (README card)
     beat.svg         the contribution beat, animated (sound lives on the website)
     languages.svg    top languages by code size
     rhythm.svg       contributions by weekday
     toybox.svg       the cat's toy box with the toys visitors gave
+    toybox-dark.svg  the same toy box at night
     btn-*.svg        README buttons in the same style
     iso-site*.svg    the website's copy of the 3D year (bare drawing with data attributes)
 """
@@ -46,6 +48,7 @@ def render_all(paths: Paths, *, only: set[str] | None = None, now: datetime | No
 
     if "banner" in want:
         put("banner.svg", banner.render(paths, site))
+        put("banner-dark.svg", banner.render(paths, site, night=True))
     if "stats" in want:
         put("stats.svg", cards.stats_card(paths, snap, refreshed))
     if "iso" in want:
@@ -58,6 +61,7 @@ def render_all(paths: Paths, *, only: set[str] | None = None, now: datetime | No
         put("rhythm.svg", cards.rhythm_card(paths, snap))
     if "toybox" in want:
         put("toybox.svg", toybox.render(paths, site, rules, state, now))
+        put("toybox-dark.svg", toybox.render(paths, site, rules, state, now, night=True))
     if "buttons" in want:
         for name, svg in buttons.render_all(paths, site, rules).items():
             put(name, svg)

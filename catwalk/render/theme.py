@@ -17,6 +17,16 @@ INK_2 = "#4E4F63"  # secondary text on light fields
 INK_3 = "#2C2F4A"  # a step up from ink, surfaces on the ink field
 NIGHT_2 = "#C9CAD8"  # secondary text on ink
 
+# After dark (the website's dark theme, src/styles/theme-dark.css): navy and indigo floors, never pure black; pink,
+# orange and ink keep their values. Cream on midnight 17.3:1 · night-2 on midnight 11.1 · cream on rose-night 15.7.
+MIDNIGHT = "#12142A"
+MIDNIGHT_2 = "#1C1F3D"
+ROSE_NIGHT = "#2C1830"
+ROSE_NIGHT_2 = "#ECC9D8"  # secondary text on rose-night
+BLUE_NIGHT = "#3366FF"
+CHIP_NIGHT = "#33376A"
+RUG_NIGHT = "#C45E83"
+
 # The five contribution levels (see catwalk.stats.calendar.LEVELS): an empty day, then pale pink to orange.
 LEVEL_TOP = ("#383B5C", "#FFE5EE", "#F9C2D3", "#F49CB6", "#FF7029")
 
