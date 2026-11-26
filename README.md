@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://hienta16.github.io"><img src="assets/generated/banner.svg" width="100%" alt="Hi, I'm Hien Ta! Data Analyst. A tortoiseshell cat with yellow-green eyes sits in a blue circle while a small cat walks along a pink measuring tape."></a>
+  <a href="https://hienta16.github.io"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/generated/banner-dark.svg"><img src="assets/generated/banner.svg" width="100%" alt="Hi, I'm Hien Ta! Data Analyst. My cat with yellow-green eyes sits in a blue circle (the tortoiseshell by day, the black-and-white cat in dark mode) while a small cat walks along a pink measuring tape."></picture></a>
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@ I'm a data analyst studying Information Systems at National Economics University
 
 <a href="https://hienta16.github.io/#beat"><img src="assets/generated/beat.svg" width="100%" alt="Every day since my first contribution as one step of a beat; busier days are taller."></a>
 
-<a href="https://hienta16.github.io/#cat"><img src="assets/generated/toybox.svg" width="100%" alt="Hien's tortoiseshell cat on a rug with the toys visitors gave."></a>
+<a href="https://hienta16.github.io/#cat"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/generated/toybox-dark.svg"><img src="assets/generated/toybox.svg" width="100%" alt="Hien's cat on a rug with the toys visitors gave."></picture></a>
 
 <!-- catwalk:toys:start -->
 <p align="center">

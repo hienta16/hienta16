@@ -98,6 +98,32 @@ class Render(unittest.TestCase):
         with self.assertRaises(ValueError):
             SiteConfig.from_dict({**cfg, "toys_live": True, "hub_public": False})
 
+    def test_night_versions_sit_beside_the_day_ones(self):
+        paths = seeded()
+        shutil.copytree(ROOT / "assets" / "art", paths.art)
+        render_all(paths, only={"banner", "toybox"}, now=NOW)
+        tuxie_white = "#F7F3EF"  # the black-and-white cat's coat; the tortoiseshell has none of it
+        for name, day_floor, night_floor in (("banner", "#FFF9F4", "#12142A"), ("toybox", "#F49CB6", "#2C1830")):
+            day = (paths.generated / f"{name}.svg").read_text(encoding="utf-8")
+            night = (paths.generated / f"{name}-dark.svg").read_text(encoding="utf-8")
+            ET.fromstring(night)
+            self.assertIn(f'rx="28" fill="{day_floor}"', day, name)
+            self.assertIn(f'rx="28" fill="{night_floor}"', night, name)
+            self.assertNotIn(tuxie_white, day, f"{name}: the tortoiseshell by day")
+            self.assertIn(tuxie_white, night, f"{name}: the black-and-white cat after dark")
+            self.assertIn("black-and-white", night)
+            self.assertNotIn("black-and-white", day)
+
+    def test_readme_offers_the_night_versions_to_dark_mode_only(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        for name in ("banner", "toybox"):
+            pair = re.search(
+                rf'<picture><source media="\(prefers-color-scheme: dark\)" srcset="assets/generated/{name}-dark\.svg"><img src="assets/generated/{name}\.svg"',
+                readme,
+            )
+            self.assertIsNotNone(pair, name)
+            self.assertTrue((ROOT / "assets" / "generated" / f"{name}-dark.svg").exists(), name)
+
     def test_replace_block_needs_markers(self):
         with self.assertRaises(ValueError):
             replace_block("no markers here", "toys", "x")

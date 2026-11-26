@@ -1,5 +1,8 @@
 """The profile banner: the hello, the role, the tortoiseshell cat in her blue circle, and the measuring tape
 along the bottom with the little ruler cat walking it (the same tape that tops every page of the website).
+
+Two versions, like the website: by day the tortoiseshell on cream; after dark (`night=True`, shown by GitHub's dark
+theme through <picture>) the black-and-white cat on midnight navy. Same layout, same tape.
 """
 
 from __future__ import annotations
@@ -7,7 +10,7 @@ from __future__ import annotations
 from ..config import Paths, SiteConfig
 from . import art
 from .svg import document, f, measure, text
-from .theme import BLUE, CREAM, INK, INK_2, ORANGE, PINK
+from .theme import BLUE, BLUE_NIGHT, CHIP_NIGHT, CREAM, INK, INK_2, MIDNIGHT, NIGHT_2, ORANGE, PINK
 
 INTRO = (
     "I find patterns: in datasets, in playlists, and in the way",
@@ -15,14 +18,17 @@ INTRO = (
 )
 
 
-def render(paths: Paths, site: SiteConfig) -> str:
+def render(paths: Paths, site: SiteConfig, *, night: bool = False) -> str:
     W, H = 1200, 430
+    floor, disc, words, words_2 = (MIDNIGHT, BLUE_NIGHT, CREAM, NIGHT_2) if night else (CREAM, BLUE, INK, INK_2)
+    pill = CHIP_NIGHT if night else INK
+    coat = "tuxie" if night else "tortie"
     hello = f"Hi, I'm {site.display_name}!"
     role_w = measure(paths, site.role, "black", 44) + 36
     tape_y = 384
 
     cat_w = 262
-    cat_h = art.height_for(paths, "tortie-front", cat_w)
+    cat_h = art.height_for(paths, f"{coat}-front", cat_w)
     disc_cx, disc_cy, disc_r = 952, 192, 158
     cat_x, cat_y = disc_cx - cat_w / 2, disc_cy + disc_r - cat_h + 22
 
@@ -46,26 +52,26 @@ def render(paths: Paths, site: SiteConfig) -> str:
         "@media (prefers-reduced-motion:reduce){.walker,.rcat__leg--a,.rcat__leg--b{animation:none}.walker{transform:translateX(980px)}}"
     )
     body = (
-        f'<rect width="{W}" height="{H}" rx="28" fill="{CREAM}"/>'
+        f'<rect width="{W}" height="{H}" rx="28" fill="{floor}"/>'
         # the cat in her circle, with a status pill
-        + f'<circle cx="{disc_cx}" cy="{disc_cy}" r="{disc_r}" fill="{BLUE}"/>'
+        + f'<circle cx="{disc_cx}" cy="{disc_cy}" r="{disc_r}" fill="{disc}"/>'
         + f'<circle cx="{disc_cx - 118}" cy="{disc_cy - 112}" r="16" fill="{PINK}"/>'
         + f'<circle cx="{disc_cx + 150}" cy="{disc_cy - 40}" r="9" fill="{ORANGE}"/>'
-        + art.place(paths, "tortie-front", cat_x, cat_y, cat_w, "cat")
-        + f'<rect x="{disc_cx - 214}" y="{disc_cy + 98}" width="186" height="38" rx="19" fill="{INK}"/>'
+        + art.place(paths, f"{coat}-front", cat_x, cat_y, cat_w, "cat")
+        + f'<rect x="{disc_cx - 214}" y="{disc_cy + 98}" width="186" height="38" rx="19" fill="{pill}"/>'
         + f'<circle cx="{disc_cx - 194}" cy="{disc_cy + 117}" r="6" fill="{ORANGE}"/>'
         + text(disc_cx - 180, disc_cy + 123, "Untangling a dataset", "text", 14.5, CREAM)
         # the words
-        + text(56, 148, hello, "black", 78, INK)
+        + text(56, 148, hello, "black", 78, words)
         + f'<rect x="56" y="178" width="{f(role_w)}" height="66" rx="14" fill="{ORANGE}"/>'
         + text(74, 228, site.role, "black", 44, INK)
-        + text(58, 296, INTRO[0], "text", 21, INK_2)
-        + text(58, 326, INTRO[1], "text", 21, INK_2)
+        + text(58, 296, INTRO[0], "text", 21, words_2)
+        + text(58, 326, INTRO[1], "text", 21, words_2)
         # the measuring tape and the ruler cat walking it
         + f'<path d="M0 {tape_y}H{W}V{H - 28}a28 28 0 0 1-28 28H28a28 28 0 0 1-28-28z" fill="{PINK}"/>'
         + f'<path d="{"".join(ticks)}" stroke="{INK}" stroke-width="1.6"/>'
         + numbers
-        + f'<g class="walker">{art.place(paths, "ruler-walk", 0, tape_y - 44, 72, "ruler")}</g>'
+        + f'<g class="walker">{art.place(paths, "ruler-walk-tuxie" if night else "ruler-walk", 0, tape_y - 44, 72, "ruler")}</g>'
     )
     return document(
         paths,
@@ -74,7 +80,7 @@ def render(paths: Paths, site: SiteConfig) -> str:
         body,
         title=f"Hi, I'm {site.display_name}! {site.role}.",
         desc=(
-            f"{site.display_name}, {site.role}. A tortoiseshell cat with yellow-green eyes sits in a blue circle; "
+            f"{site.display_name}, {site.role}. A {'black-and-white' if night else 'tortoiseshell'} cat with yellow-green eyes sits in a blue circle; "
             "a small cat walks along a pink measuring tape."
         ),
         css=css,
