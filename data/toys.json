@@ -1,27 +1,27 @@
 {
   "schema": 1,
-  "updatedAt": "2026-11-22T22:40:20Z",
+  "updatedAt": "2026-11-26T13:36:06Z",
   "active": [
     {
-      "id": "gift-2",
-      "toy": "feather",
-      "variant": "orange",
-      "issue": 2,
+      "id": "gift-5",
+      "toy": "box",
+      "variant": "kraft",
+      "issue": 5,
       "giver": {
         "login": "hienta16",
         "id": 210944667
       },
-      "createdAt": "2026-11-22T22:40:12Z",
-      "expiresAt": "2026-11-24T22:40:12Z",
+      "createdAt": "2026-11-26T13:35:57Z",
+      "expiresAt": "2026-12-10T13:35:57Z",
       "source": "github-issue"
     }
   ],
   "totals": {
-    "box": 0,
+    "box": 1,
     "feather": 1,
     "yarn": 0
   },
-  "giftsTotal": 1,
+  "giftsTotal": 2,
   "ledger": [
     {
       "issue": 2,
@@ -30,6 +30,14 @@
       "processedAt": "2026-11-22T22:40:20Z",
       "userId": 210944667,
       "toy": "feather"
+    },
+    {
+      "issue": 5,
+      "outcome": "accepted",
+      "at": "2026-11-26T13:35:57Z",
+      "processedAt": "2026-11-26T13:36:06Z",
+      "userId": 210944667,
+      "toy": "box"
     }
   ]
 }
